@@ -51,9 +51,21 @@ and knowing that the magnets are 90 deg apart we can get the angular velocity th
 
 The time values in this formula are in milliseconds.
 
----
+I used this website as a reference for the calculations: [http://eodg.atm.ox.ac.uk/user/dudhia/rowing/physics/ergometer.html](http://eodg.atm.ox.ac.uk/user/dudhia/rowing/physics/ergometer.html)
 
-I used this website as a reference for the other calculations: [http://eodg.atm.ox.ac.uk/user/dudhia/rowing/physics/ergometer.html](http://eodg.atm.ox.ac.uk/user/dudhia/rowing/physics/ergometer.html)
+The energy of the previous stroke is calculated at the start of a new one through this equation:
+
+<img src="https://latex.codecogs.com/gif.latex?E%20%3D%20%5Csum_%7Bi%7D%7B%28%5Ctheta_i%20-%20%5Ctheta_%7Bi-1%7D%29%5BI%28%5Cfrac%7B%5Comega_i%20-%20%5Comega_%7Bi-1%7D%7D%7Bt_i%20-%20t_%7Bi-1%7D%7D%29%20&plus;%20K_a%5Comega_i%5E2%20&plus;%20K_m%20%5Comega%20&plus;%20K_s%5D%7D" />
+
+The constant Ka is for the air damping, Km is for the magnetic damping and Ks accounts for the friction independent of the angular velocity.
+
+These three values are calculated after every stroke by measuring the free deceleration of the flywheel, and fitting to this equation:
+
+<img src="https://latex.codecogs.com/gif.latex?%5Cfrac%7Bdw%7D%7Bdt%7D%3DK_a%5Comega%5E2&plus;K_m%5Comega&plus;K_s" />
+
+If the fit is good, the current values are updated and stored into the EEPROM.
+
+---
 
 - The configuration is stored in the `config.h` header file.
 
