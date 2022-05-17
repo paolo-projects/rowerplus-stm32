@@ -65,6 +65,12 @@ These three values are calculated after every stroke by measuring the free decel
 
 If the fit is good, the current values are updated and stored into the EEPROM.
 
+The distance is calculated through this formula:
+
+<img src="https://latex.codecogs.com/svg.latex?D%20%3D%20%5Csum_%7Bi%7D%7B%28%5Ctheta_i%20-%20%5Ctheta_%7Bi-1%7D%29%5Csqrt%5B3%5D%7B%5Cfrac%7BK_a%7D%7Bc%7D&plus;%5Cfrac%7BK_m%7D%7Bc%5Ccdot%5Comega_i%7D&plus;%5Cfrac%7BK_s%7D%7Bc%5Ccdot%20%5Comega_i%5E2%7D%7D%7D" />
+
+Where `c` is a constant of the water resistance for an hypothetical boat motion, that I have taken from the link above.
+
 ---
 
 - The configuration is stored in the `config.h` header file.
