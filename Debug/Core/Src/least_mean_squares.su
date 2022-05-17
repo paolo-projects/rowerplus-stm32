@@ -1,0 +1,2 @@
+../Core/Src/least_mean_squares.c:40:15:lms_quadratic	40	static
+../Core/Src/least_mean_squares.c:80:20:build_A_mat	32	static

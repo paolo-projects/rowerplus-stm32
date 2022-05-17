@@ -1,0 +1,12 @@
+../Core/Src/hall_parser.c:45:6:hall_parser_init	16	static
+../Core/Src/hall_parser.c:66:20:shift_array_left_f	24	static
+../Core/Src/hall_parser.c:74:20:shift_array_left_st	24	static
+../Core/Src/hall_parser.c:114:6:hall_parser_push_trigger	24	static
+../Core/Src/hall_parser.c:154:20:angular_velocity_measurement_received	24	static
+../Core/Src/hall_parser.c:228:28:get_stroke_state	16	static
+../Core/Src/hall_parser.c:271:6:compute_stroke	72	static
+../Core/Src/hall_parser.c:363:21:compute_distance	40	static
+../Core/Src/hall_parser.c:368:21:compute_energy	40	static
+../Core/Src/hall_parser.c:392:21:get_angular_velocity_filtered	16	static
+../Core/Src/hall_parser.c:403:20:is_w_a_minimum	32	static
+../Core/Src/hall_parser.c:421:20:is_w_a_maximum	32	static

@@ -1,0 +1,2 @@
+../Core/Src/data_storage.c:23:6:storage_write	24	static
+../Core/Src/data_storage.c:43:6:storage_read	32	static
