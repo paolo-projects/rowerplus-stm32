@@ -55,7 +55,7 @@ I used this website as a reference for the calculations: [http://eodg.atm.ox.ac.
 
 The energy of the previous stroke is calculated at the start of a new one through this equation:
 
-<img src="https://latex.codecogs.com/svg.latex?E%20%3D%20%5Csum_%7Bi%7D%7B%28%5Ctheta_i%20-%20%5Ctheta_%7Bi-1%7D%29%5BI%28%5Cfrac%7B%5Comega_i%20-%20%5Comega_%7Bi-1%7D%7D%7Bt_i%20-%20t_%7Bi-1%7D%7D%29%20&plus;%20K_a%5Comega_i%5E2%20&plus;%20K_m%20%5Comega%20&plus;%20K_s%5D%7D" />
+<img src="https://latex.codecogs.com/svg.latex?E%20%3D%20%5Csum_%7Bi%7D%7B%28%5Ctheta_i%20-%20%5Ctheta_%7Bi-1%7D%29%5BI%28%5Cfrac%7B%5Comega_i%20-%20%5Comega_%7Bi-1%7D%7D%7Bt_i%20-%20t_%7Bi-1%7D%7D%29%20&plus;%20K_a%5Comega_i%5E2%20&plus;%20K_m%20%5Comega_i%20&plus;%20K_s%5D%7D" />
 
 The constant Ka is for the air damping, Km is for the magnetic damping and Ks accounts for the friction independent of the angular velocity.
 
