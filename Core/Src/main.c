@@ -18,10 +18,11 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "usbd_custom_hid_if.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -58,6 +59,10 @@ out_data_t out_data ={
 		.pd = {0,0},
 		.et = {'E', 'T', 0, 0},
 };
+
+usb_out_data_t usb_out_data = {0};
+
+extern USBD_HandleTypeDef hUsbDeviceFS;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -107,6 +112,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM1_Init();
   MX_I2C1_Init();
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
 	hall_parser_init();
 	memset(&hall_parser, 0, sizeof(hall_parser_t));
@@ -341,12 +347,16 @@ void ergometer_stroke(ergometer_stroke_params_t* stroke_params)
 	HAL_UART_Transmit(&huart2, buffer, strlen(buffer), 100);
 #else
 	//TODO: check float32 encoding compatibility
-	out_data.energy_j = stroke_params->energy_j;
+	/*out_data.energy_j = stroke_params->energy_j;
 	out_data.mean_power = stroke_params->mean_power;
 	out_data.distance = stroke_params->distance;
-	out_data.checksum = 0;
+	out_data.checksum = 0;*/
 
-	uint16_t checksum = 0;
+	usb_out_data.energy_j = stroke_params->energy_j;
+	usb_out_data.mean_power = stroke_params->mean_power;
+	usb_out_data.distance = stroke_params->distance;
+
+	/*uint16_t checksum = 0;
 	char* out_data_c = &out_data;
 	for(uint32_t i = 0; i < sizeof(out_data_t); i++)
 	{
@@ -357,7 +367,9 @@ void ergometer_stroke(ergometer_stroke_params_t* stroke_params)
 
 	//HAL_UART_Transmit(huart, out_data_c, sizeof(uart_out_data_t), 100);
 	HAL_UART_Transmit(&huart2, out_data_c, sizeof(out_data_t), 100);
-	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);*/
+
+	USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, &usb_out_data, 64);
 #endif
 }
 
