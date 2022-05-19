@@ -1,7 +1,7 @@
 ../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c:604:16:USBD_CUSTOM_HID_DataIn	0	static
 ../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c:622:16:USBD_CUSTOM_HID_DataOut	8	static
-../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c:678:16:USBD_CUSTOM_HID_EP0_RxReady	8	static
-../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c:703:17:USBD_CUSTOM_HID_GetDeviceQualifierDesc	0	static
+../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c:679:16:USBD_CUSTOM_HID_EP0_RxReady	8	static
+../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c:705:17:USBD_CUSTOM_HID_GetDeviceQualifierDesc	0	static
 ../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c:519:17:USBD_CUSTOM_HID_GetFSCfgDesc	16	static
 ../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c:547:17:USBD_CUSTOM_HID_GetHSCfgDesc	0	static
 ../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c:575:17:USBD_CUSTOM_HID_GetOtherSpeedCfgDesc	0	static
@@ -9,5 +9,5 @@
 ../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c:311:16:USBD_CUSTOM_HID_DeInit	16	static
 ../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c:248:16:USBD_CUSTOM_HID_Init	24	static
 ../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c:480:9:USBD_CUSTOM_HID_SendReport	16	static
-../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c:648:9:USBD_CUSTOM_HID_ReceivePacket	8	static
-../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c:716:9:USBD_CUSTOM_HID_RegisterInterface	0	static
+../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c:649:9:USBD_CUSTOM_HID_ReceivePacket	8	static
+../Middlewares/ST/STM32_USB_Device_Library/Class/CustomHID/Src/usbd_customhid.c:718:9:USBD_CUSTOM_HID_RegisterInterface	0	static

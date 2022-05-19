@@ -76,3 +76,21 @@ Where `c` is a constant of the water resistance for an hypothetical boat motion,
 - The configuration is stored in the `config.h` header file.
 
 - The computed values are the energy spent (in Joules), the distance traveled (in meters) and the average stroke power.
+
+## USB Communication
+
+There are two versions of this firmware. The first one uses the builtin StLink USB-to-UART to send the values to the host device.
+This method is totally fine, but I implemented another version of the firmware that leverages the USB capabilities of the STM32 board.
+
+By wiring a USB cable to the PA11 and PA12 pins (I'm using a Nucleo F401RE, your pins could be different), and providing power to the E5V pin, 
+the device is cabable of setting up its own USB communication with the host. The StLink circuit is still needed for the HSE crystal, and the 
+jumper has to be moved to E5V setup.
+
+The device sets itself up as a HID device, delivering 16-bytes data packets with the three float values of energy, power and distance.
+
+This method is of course (potentially) faster than the virtual COM port, and additionally the device can be given a unique VID and PID to make sure the
+android app detects only this specific custom device.
+
+*Since we're using the StLink builtin oscillator, we have to wait for it to be powered up before initializing the HSE clock. When we power up the
+device through the E5V pin the STM32 gets initialized before the StLink is ready, so it doesn't detect the HSE clock and won't start.
+This is the reason a 3000 milliseconds delay is added at the start. This is mandatory, and the only fix is to connect your own external oscillator circuit.*

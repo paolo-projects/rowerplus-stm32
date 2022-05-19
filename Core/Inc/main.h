@@ -84,7 +84,7 @@ typedef struct {
 	float32_t energy_j;
 	float32_t mean_power;
 	float32_t distance;
-	char padding[52];
+	char padding[4];
 } usb_out_data_t;
 
 /* USER CODE END Private defines */

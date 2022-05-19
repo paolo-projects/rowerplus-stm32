@@ -98,6 +98,10 @@ int main(void)
 
   /* USER CODE BEGIN Init */
 
+  // This delay is required since when we power the device through E5V pin
+  // the STLink HSE needs some time to be powered up
+  HAL_Delay(3000);
+
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -346,30 +350,11 @@ void ergometer_stroke(ergometer_stroke_params_t* stroke_params)
 	sprintf(buffer, "%.3f,%.3f,%.3f\r\n", stroke_params->energy_j, stroke_params->mean_power, stroke_params->distance);
 	HAL_UART_Transmit(&huart2, buffer, strlen(buffer), 100);
 #else
-	//TODO: check float32 encoding compatibility
-	/*out_data.energy_j = stroke_params->energy_j;
-	out_data.mean_power = stroke_params->mean_power;
-	out_data.distance = stroke_params->distance;
-	out_data.checksum = 0;*/
-
 	usb_out_data.energy_j = stroke_params->energy_j;
 	usb_out_data.mean_power = stroke_params->mean_power;
 	usb_out_data.distance = stroke_params->distance;
 
-	/*uint16_t checksum = 0;
-	char* out_data_c = &out_data;
-	for(uint32_t i = 0; i < sizeof(out_data_t); i++)
-	{
-		checksum += out_data_c[i];
-	}
-
-	out_data.checksum = checksum;
-
-	//HAL_UART_Transmit(huart, out_data_c, sizeof(uart_out_data_t), 100);
-	HAL_UART_Transmit(&huart2, out_data_c, sizeof(out_data_t), 100);
-	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);*/
-
-	USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, &usb_out_data, 64);
+	USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, &usb_out_data, 16);
 #endif
 }
 
