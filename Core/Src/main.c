@@ -22,7 +22,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "usbd_custom_hid_if.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -74,6 +73,7 @@ static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
 void ergometer_stroke(ergometer_stroke_params_t* stroke_params);
 void params_received(damping_constants_t* damping_constants);
+void angular_velocity_received(float angular_velocity);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -132,6 +132,7 @@ int main(void)
 
 	hall_parser.callback = ergometer_stroke;
 	hall_parser.damping_params_callback = params_received;
+	hall_parser.angular_velocity_callback = angular_velocity_received;
 	hall_parser.params.I = MOMENT_OF_INERTIA;
 
 	HAL_TIM_Base_Start_IT(&htim1);
@@ -354,7 +355,7 @@ void ergometer_stroke(ergometer_stroke_params_t* stroke_params)
 	usb_out_data.mean_power = stroke_params->mean_power;
 	usb_out_data.distance = stroke_params->distance;
 
-	USBD_CUSTOM_HID_SendReport(&hUsbDeviceFS, &usb_out_data, 16);
+	USBD_HID_SendReport(&hUsbDeviceFS, &usb_out_data, 16);
 #endif
 }
 
@@ -365,6 +366,16 @@ void params_received(damping_constants_t* damping_constants)
 	storage_data.km = damping_constants->km;
 	storage_data.ks = damping_constants->ks;
 	storage_write(&storage_data);
+}
+
+void angular_velocity_received(float angular_velocity)
+{
+	usb_out_data.energy_j = 0.0f;
+	usb_out_data.distance = 0.0f;
+	usb_out_data.mean_power = 0.0f;
+	memcpy(&usb_out_data.padding, &angular_velocity, sizeof(float));
+
+	USBD_HID_SendReport(&hUsbDeviceFS, &usb_out_data, 16);
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)

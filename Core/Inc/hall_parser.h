@@ -30,6 +30,7 @@ typedef struct {
 
 typedef void(*ergometer_stroke_callback)(ergometer_stroke_params_t* stroke_params);
 typedef void(*ergometer_damping_constants_callback)(damping_constants_t* stroke_params);
+typedef void(*ergometer_angular_velocity_callback)(float angular_velocity);
 
 typedef enum {
 	REST,
@@ -47,6 +48,7 @@ typedef struct {
 	float angular_velocities_filtered[ANGULAR_VELOCITIES_BUFFER_SIZE];
 	ergometer_stroke_callback callback;
 	ergometer_damping_constants_callback damping_params_callback;
+	ergometer_angular_velocity_callback angular_velocity_callback;
 	ergometer_params_t params;
 } hall_parser_t;
 

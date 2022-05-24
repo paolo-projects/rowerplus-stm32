@@ -136,6 +136,8 @@ void hall_parser_push_trigger(hall_parser_t* parser)
 		return;
 	}
 
+	parser->angular_velocity_callback(w);
+
 	shift_array_left_f(parser->angular_velocities, ANGULAR_VELOCITIES_BUFFER_SIZE);
 	shift_array_left_st(parser->angular_velocities_times, ANGULAR_VELOCITIES_BUFFER_SIZE);
 
