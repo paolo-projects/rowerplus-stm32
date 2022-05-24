@@ -37,8 +37,8 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f401xe.h \
  E:/STM32CubeIDE/workspace_1.9.0/RowerPlusFirmware/Drivers/CMSIS/DSP/Include/arm_math.h \
  ../Core/Inc/least_mean_squares.h ../Core/Inc/ehd_math.h \
- ../Core/Inc/common.h ../Core/Inc/data_storage.h \
- ../USB_DEVICE/App/usb_device.h \
+ ../Core/Inc/common.h ../Core/Inc/fixed_vector.h \
+ ../Core/Inc/data_storage.h ../USB_DEVICE/App/usb_device.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h \
  ../USB_DEVICE/Target/usbd_conf.h
 ../Core/Inc/main.h:
@@ -84,6 +84,7 @@ E:/STM32CubeIDE/workspace_1.9.0/RowerPlusFirmware/Drivers/CMSIS/DSP/Include/arm_
 ../Core/Inc/least_mean_squares.h:
 ../Core/Inc/ehd_math.h:
 ../Core/Inc/common.h:
+../Core/Inc/fixed_vector.h:
 ../Core/Inc/data_storage.h:
 ../USB_DEVICE/App/usb_device.h:
 ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h:

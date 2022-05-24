@@ -8,6 +8,7 @@
 #include "fpu_math.h"
 #include "least_mean_squares.h"
 #include "ehd_math.h"
+#include "fixed_vector.h"
 #include "common.h"
 #include "config.h"
 
@@ -41,11 +42,9 @@ typedef enum {
 typedef struct {
 	STROKE_STATE stroke_state;
 	damping_constants_t damping_constants;
-	float angular_velocities[ANGULAR_VELOCITIES_BUFFER_SIZE];
-	systemtime_t angular_velocities_times[ANGULAR_VELOCITIES_BUFFER_SIZE];
-	uint32_t base_point;
-	uint32_t turning_point;
-	float angular_velocities_filtered[ANGULAR_VELOCITIES_BUFFER_SIZE];
+	fixed_vector_float_t angular_velocities;
+	fixed_vector_systemtime_t angular_velocities_times;
+	fixed_vector_float_t angular_velocities_filtered;
 	ergometer_stroke_callback callback;
 	ergometer_damping_constants_callback damping_params_callback;
 	ergometer_angular_velocity_callback angular_velocity_callback;

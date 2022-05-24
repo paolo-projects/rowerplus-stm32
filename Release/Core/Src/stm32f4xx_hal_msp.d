@@ -37,7 +37,8 @@ Core/Src/stm32f4xx_hal_msp.o: ../Core/Src/stm32f4xx_hal_msp.c \
  ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f401xe.h \
  E:/STM32CubeIDE/workspace_1.9.0/RowerPlusFirmware/Drivers/CMSIS/DSP/Include/arm_math.h \
  ../Core/Inc/least_mean_squares.h ../Core/Inc/ehd_math.h \
- ../Core/Inc/common.h ../Core/Inc/data_storage.h
+ ../Core/Inc/common.h ../Core/Inc/fixed_vector.h \
+ ../Core/Inc/data_storage.h
 ../Core/Inc/main.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
 ../Core/Inc/stm32f4xx_hal_conf.h:
@@ -81,4 +82,5 @@ E:/STM32CubeIDE/workspace_1.9.0/RowerPlusFirmware/Drivers/CMSIS/DSP/Include/arm_
 ../Core/Inc/least_mean_squares.h:
 ../Core/Inc/ehd_math.h:
 ../Core/Inc/common.h:
+../Core/Inc/fixed_vector.h:
 ../Core/Inc/data_storage.h:

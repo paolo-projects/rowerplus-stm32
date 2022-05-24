@@ -1,5 +1,6 @@
 "./Core/Src/data_storage.o"
 "./Core/Src/ehd_math.o"
+"./Core/Src/fixed_vector.o"
 "./Core/Src/hall_parser.o"
 "./Core/Src/least_mean_squares.o"
 "./Core/Src/linear_regression.o"
