@@ -1,4 +1,4 @@
 ../Core/Src/hall_parser.c:66:20:shift_array_left_f.constprop	0	static
 ../Core/Src/hall_parser.c:45:6:hall_parser_init	16	static
-../Core/Src/hall_parser.c:271:6:compute_stroke	72	static
-../Core/Src/hall_parser.c:114:6:hall_parser_push_trigger	24	static
+../Core/Src/hall_parser.c:273:6:compute_stroke	72	static
+../Core/Src/hall_parser.c:114:6:hall_parser_push_trigger	32	static
