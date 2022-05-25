@@ -47,8 +47,8 @@ typedef struct {
 	fixed_vector_float_t angular_velocities_filtered;
 	ergometer_stroke_callback callback;
 	ergometer_damping_constants_callback damping_params_callback;
-	ergometer_angular_velocity_callback angular_velocity_callback;
 	ergometer_params_t params;
+	float release_distance;
 } hall_parser_t;
 
 void hall_parser_init();

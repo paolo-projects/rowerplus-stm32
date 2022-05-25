@@ -47,17 +47,15 @@ void hall_parser_push_trigger(hall_parser_t* parser)
 
 	float w = (float)ANG_VEL_NUMERATOR/delta_t;
 
-	if(w > ANGULAR_VELOCITY_LIMIT)
+	if(w > ANGULAR_VELOCITY_MAX_LIMIT)
 	{
 		return;
 	}
 
-	parser->angular_velocity_callback(w);
-
 	fixed_vector_f_push_back(&parser->angular_velocities, w);
 	fixed_vector_st_push_back(&parser->angular_velocities_times, &system_time);
 
-	if(parser->angular_velocities_times.size > 1)
+	if(parser->angular_velocities_times.size >= 4 && w > ANGULAR_VELOCITY_MIN_LIMIT)
 	{
 		angular_velocity_measurement_received(parser);
 	}
@@ -66,26 +64,36 @@ void hall_parser_push_trigger(hall_parser_t* parser)
 static inline void angular_velocity_measurement_received(hall_parser_t* parser)
 {
 	// Apply filter (just averaging the last measurement with the previous ones to remove zig-zag from curve)
-	fixed_vector_f_push_back(&parser->angular_velocities_filtered, get_angular_velocity_filtered(parser));
+	float filtered_angular_velocity = get_angular_velocity_filtered(parser);
+	fixed_vector_f_push_back(&parser->angular_velocities_filtered, filtered_angular_velocity);
 
-	STROKE_STATE new_state = get_stroke_state(parser);
+	if(parser->angular_velocities_filtered.size > ANGULAR_VELOCITIES_LAG*2)
+	{
+		STROKE_STATE new_state = get_stroke_state(parser);
 
-	if(new_state == DECELERATING)
-	{
-		compute_stroke(parser);
-	} else if (new_state == PULLING)
-	{
-		compute_stroke_params(parser);
+		if(is_w_a_maximum(parser))//parser->stroke_state == PULLING && new_state == DECELERATING)
+		{
+			compute_stroke(parser);
+
+			fixed_vector_f_clear(&parser->angular_velocities);
+			fixed_vector_f_clear(&parser->angular_velocities_filtered);
+			fixed_vector_st_clear(&parser->angular_velocities_times);
+		} else if (is_w_a_minimum(parser))//(parser->stroke_state == DECELERATING || parser->stroke_state == REST) && new_state == PULLING)
+		{
+			compute_stroke_params(parser);
+
+			fixed_vector_f_clear(&parser->angular_velocities);
+			fixed_vector_f_clear(&parser->angular_velocities_filtered);
+			fixed_vector_st_clear(&parser->angular_velocities_times);
+		}
+
+		parser->stroke_state = new_state;
 	}
-
-	fixed_vector_f_clear(&parser->angular_velocities);
-	fixed_vector_f_clear(&parser->angular_velocities_filtered);
-	fixed_vector_st_clear(&parser->angular_velocities_times);
 }
 
 static inline STROKE_STATE get_stroke_state(hall_parser_t* parser)
 {
-	if(*fixed_vector_f_get(&parser->angular_velocities, ANGULAR_VELOCITIES_BUFFER_SIZE-ANGULAR_VELOCITIES_LAG) > ANGULAR_VELOCITY_ACTIVATION_TRESHOLD)
+	if(*fixed_vector_f_get(&parser->angular_velocities, parser->angular_velocities.size-1) > ANGULAR_VELOCITY_ACTIVATION_TRESHOLD)
 	{
 		// Moving Average
 		/*
@@ -128,7 +136,11 @@ static inline void apply_fir(arm_fir_instance_f32* instance, float32_t* data, fl
 
 static inline void compute_stroke(hall_parser_t* parser)
 {
-	if(parser->angular_velocities_filtered.size > STROKE_PULL_MIN_POINTS)
+	// We discard 3 points at the end because the peak detection has a delay of 3 points
+	int to_discard_end = 3;
+
+	int points_count = parser->angular_velocities_filtered.size - to_discard_end;
+	if(points_count > STROKE_PULL_MIN_POINTS)
 	{
 		// If we don't have damping params (kA and kM) we can't go on
 		if(parser->damping_constants.has_params == TRUE)
@@ -141,22 +153,25 @@ static inline void compute_stroke(hall_parser_t* parser)
 			float km_c = parser->damping_constants.km / DISTANCE_CORRELATION_COEFFICIENT;
 			float ks_c = parser->damping_constants.ks / DISTANCE_CORRELATION_COEFFICIENT;
 
-			for(uint32_t i = 0; i < parser->angular_velocities_filtered.size -1; i++)
+			for(uint32_t i = 0; i < parser->angular_velocities_filtered.size - 1 - to_discard_end; i++)
 			{
-				energy += -compute_energy(parser, *fixed_vector_f_get(&parser->angular_velocities_filtered, i), *fixed_vector_f_get(&parser->angular_velocities_filtered, i-1),
+				energy += compute_energy(parser, *fixed_vector_f_get(&parser->angular_velocities_filtered, i), *fixed_vector_f_get(&parser->angular_velocities_filtered, i-1),
 						fixed_vector_st_get(&parser->angular_velocities_times, i), fixed_vector_st_get(&parser->angular_velocities_times, i-1));
-				distance += -compute_distance(M_PI_2, *fixed_vector_f_get(&parser->angular_velocities_filtered, i), ka_c, km_c, ks_c);
+				distance += compute_distance(M_PI_2, *fixed_vector_f_get(&parser->angular_velocities_filtered, i), ka_c, km_c, ks_c);
 			}
 
 			// Compute other variables
-			uint32_t stroke_time = systemtime_time_diff_us(fixed_vector_st_get(&parser->angular_velocities_times, parser->angular_velocities_times.size - 1), fixed_vector_st_get(&parser->angular_velocities_times, 0));
+			uint32_t stroke_time = systemtime_time_diff_us(fixed_vector_st_get(&parser->angular_velocities_times, parser->angular_velocities_times.size - 1 - to_discard_end), fixed_vector_st_get(&parser->angular_velocities_times, 0));
 			float mean_power = (float)(1e6*energy) / stroke_time;
 
 			// Send the stroke results
-			stroke_params.energy_j = energy;
+			stroke_params.energy_j = (4 * energy + 0.35f * stroke_time / 1e3f) / 4187.0f;
 			stroke_params.mean_power = mean_power;
-			stroke_params.distance = distance;
+			// We include here the distance calculated from the previous release phase
+			stroke_params.distance = distance + hall_parser->release_distance;
 			parser->callback(&stroke_params);
+
+			hall_parser->release_distance = 0.0f;
 		}
 	}
 }
@@ -169,14 +184,14 @@ static inline void compute_stroke_params(hall_parser_t* parser)
 	 * of the air resistance, magnetic resistance and other kinds of friction, thus we
 	 * can find the damping parameters here through the formula:
 	 *
-	 * dw / dt = kA * w^2 + kM
+	 * dw / dt = kA/I * w^2 + kM/I
 	 *
 	 * Here we assume the magnetic damping is independent of the angular velocity,
 	 * (Tm = kM ===> the magnetic torque is constant through all the motion).
 	 * This may not be the case as it could as well be proportional to the angular velocity
 	 * (Tm = kM * w) and in this case we can fit to a polynomial.
 	 *
-	 * dw / dt = kA * w^2 + kM * w + kS
+	 * dw / dt = kA/I * w^2 + kM/I * w + kS/I
 	 *
 	 * The constant term kS in this case will account for the friction between the moving parts.
 	 *
@@ -184,28 +199,58 @@ static inline void compute_stroke_params(hall_parser_t* parser)
 	 * so we can update the kA and kM values after every stroke, taking into account
 	 * every modification to the environment that could have happened
 	 *
-	 * Or we could fit to a quadratic equation
+	 * In this case we fit to a quadratic equation
 	 */
-	uint32_t regression_count = parser->angular_velocities_filtered.size - 9;
+
+	// We have to discard:
+	// 2 measurements at the beginning (because we're too close to the peak, the flywheel is still subject to external torque)
+	// 4 measurements at the end (because we have a couple of points of the next pull phase (due to the filter lag) and the error gets large due to low w)
+
+	int to_discard_begin = 2;
+	int to_discard_end = 4;
+
+	// The points used for the regression are the measurements minus the points discarded (for the previous reasons)
+	// minus an additional point because having to calculate the angular acceleration (w1 - w0) we have to discard
+	// another point
+	int regression_count = parser->angular_velocities_filtered.size - to_discard_begin - to_discard_end - 1;
 
 	if(regression_count > REGRESSION_MIN_POINTS)
 	{
-		for(uint32_t i = 0; i < parser->angular_velocities_filtered.size; i++)
+		hall_parser->release_distance = 0.0f;
+
+		float ka_c = parser->damping_constants.ka / DISTANCE_CORRELATION_COEFFICIENT;
+		float km_c = parser->damping_constants.km / DISTANCE_CORRELATION_COEFFICIENT;
+		float ks_c = parser->damping_constants.ks / DISTANCE_CORRELATION_COEFFICIENT;
+
+		int n = 0;
+
+		for(uint32_t i = to_discard_begin + 1; i < parser->angular_velocities_filtered.size - to_discard_end; i++)
 		{
-			regression_y[i] = 1e6f*(*fixed_vector_f_get(&parser->angular_velocities_filtered, i) - *fixed_vector_f_get(&parser->angular_velocities_filtered, i-1))
-															/ systemtime_time_diff_us(fixed_vector_st_get(&parser->angular_velocities_times, i), fixed_vector_st_get(&parser->angular_velocities_times, i-1));
-			regression_x[i] = *fixed_vector_f_get(&parser->angular_velocities_filtered, i);
+			float angular_accel = 1e6f*(*fixed_vector_f_get(&parser->angular_velocities_filtered, i) - *fixed_vector_f_get(&parser->angular_velocities_filtered, i-1))
+																			/ systemtime_time_diff_us(fixed_vector_st_get(&parser->angular_velocities_times, i), fixed_vector_st_get(&parser->angular_velocities_times, i-1));
+			if(angular_accel<0) {
+				regression_y[n] = angular_accel;
+				regression_x[n] = *fixed_vector_f_get(&parser->angular_velocities_filtered, i);
+			}
+			n++;
 		}
 
-		lms_result_t* result = lms_quadratic(regression_y, regression_x, regression_count);
+		// The distance for the release phase (deceleration) is calculated here taking
+		// all the points into account. This value will be added to the next pull stroke
+		for(uint32_t i = 0; i < parser->angular_velocities_filtered.size; i++)
+		{
+			hall_parser->release_distance += compute_distance(M_PI_2, *fixed_vector_f_get(&hall_parser->angular_velocities_filtered, i), ka_c, km_c, ks_c);
+		}
+
+		lms_result_t* result = lms_quadratic(regression_y, regression_x, n);
 
 		// Here we check if the regression is good enough through the R2 parameter,
 		// otherwise we discard the results
 		if(result != NULL && result->r2 > LINREG_R2_MIN_TRESHOLD)
 		{
-			parser->damping_constants.ka = result->c;
-			parser->damping_constants.km = result->b;
-			parser->damping_constants.ks = result->a;
+			parser->damping_constants.ka = result->c * parser->params.I;
+			parser->damping_constants.km = result->b * parser->params.I;
+			parser->damping_constants.ks = result->a * parser->params.I;
 			parser->damping_constants.has_params = TRUE;
 
 			parser->damping_params_callback(&parser->damping_constants);
@@ -221,7 +266,7 @@ static inline void compute_stroke_params(hall_parser_t* parser)
 
 static inline float compute_distance(float angle, float w2, float ka_c, float km_c, float ks_c)
 {
-	return angle * cbrt(ka_c + km_c/w2 + ks_c/sqr(w2));
+	return -(angle * cbrt(ka_c + km_c/w2 + ks_c/sqr(w2)));
 }
 
 static inline float compute_energy(hall_parser_t* parser, float w2, float w1, systemtime_t* t2, systemtime_t* t1)
@@ -238,9 +283,9 @@ static inline float compute_energy(hall_parser_t* parser, float w2, float w1, sy
 				M_PI_2*(
 						parser->params.I *
 						1e6f * (w2 - w1) / systemtime_time_diff_us(t2, t1)
-						+ parser->damping_constants.ka*sqr(w2)
-		+ parser->damping_constants.km*w2
-		+ parser->damping_constants.ks
+						- parser->damping_constants.ka*sqr(w2)
+		- parser->damping_constants.km*w2
+		- parser->damping_constants.ks
 				);
 	} else
 	{
@@ -253,15 +298,19 @@ static inline float get_angular_velocity_filtered(hall_parser_t* parser)
 	// Averaging with last 3 measurements
 	// The n-1 and n-2 coefficients are the same to remove the zig-zag noise
 
-	return 0.3f * *fixed_vector_f_get(&parser->angular_velocities, parser->angular_velocities.size - 1)
-											 + 0.3f * *fixed_vector_f_get(&parser->angular_velocities, parser->angular_velocities.size - 2)
-																				 + 0.2f * *fixed_vector_f_get(&parser->angular_velocities, parser->angular_velocities.size - 3)
-																													 + 0.2f * *fixed_vector_f_get(&parser->angular_velocities, parser->angular_velocities.size - 4);
+	float fir_val = 0.0f;
+
+	fir_val += 0.3f * *fixed_vector_f_get(&parser->angular_velocities, parser->angular_velocities.size - 1);
+
+	fir_val += 0.3f * ((parser->angular_velocities.size > 1) ? *fixed_vector_f_get(&parser->angular_velocities, parser->angular_velocities.size - 2) : 0.0f);
+	fir_val += 0.2f * ((parser->angular_velocities.size > 2) ? *fixed_vector_f_get(&parser->angular_velocities, parser->angular_velocities.size - 3) : 0.0f);
+	fir_val += 0.2f * ((parser->angular_velocities.size > 3) ? *fixed_vector_f_get(&parser->angular_velocities, parser->angular_velocities.size - 4) : 0.0f);
+
+	return fir_val;
 }
 
 static inline BOOL is_w_a_minimum(hall_parser_t* parser)
 {
-	BOOL result = TRUE;
 	float w = *fixed_vector_f_get(&parser->angular_velocities_filtered, parser->angular_velocities_filtered.size - ANGULAR_VELOCITIES_LAG - 1);
 	for(uint32_t i = parser->angular_velocities_filtered.size - ANGULAR_VELOCITIES_LAG*2 - 1; i < parser->angular_velocities_filtered.size; i++)
 	{
@@ -279,7 +328,6 @@ static inline BOOL is_w_a_minimum(hall_parser_t* parser)
 
 static inline BOOL is_w_a_maximum(hall_parser_t* parser)
 {
-	BOOL result = TRUE;
 	float w = *fixed_vector_f_get(&parser->angular_velocities_filtered, parser->angular_velocities_filtered.size - ANGULAR_VELOCITIES_LAG - 1);
 	for(uint32_t i = parser->angular_velocities_filtered.size - ANGULAR_VELOCITIES_LAG*2 - 1; i < parser->angular_velocities_filtered.size; i++)
 	{

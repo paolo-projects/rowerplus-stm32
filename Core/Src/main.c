@@ -18,7 +18,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -59,9 +58,7 @@ out_data_t out_data ={
 		.et = {'E', 'T', 0, 0},
 };
 
-usb_out_data_t usb_out_data = {0};
-
-extern USBD_HandleTypeDef hUsbDeviceFS;
+BOOL hallIntermittentFlag = FALSE;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -73,7 +70,6 @@ static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
 void ergometer_stroke(ergometer_stroke_params_t* stroke_params);
 void params_received(damping_constants_t* damping_constants);
-void angular_velocity_received(float angular_velocity);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -100,7 +96,7 @@ int main(void)
 
   // This delay is required since when we power the device through E5V pin
   // the STLink HSE needs some time to be powered up
-  HAL_Delay(3000);
+  //HAL_Delay(3000);
 
   /* USER CODE END Init */
 
@@ -116,7 +112,6 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM1_Init();
   MX_I2C1_Init();
-  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
 	hall_parser_init();
 	memset(&hall_parser, 0, sizeof(hall_parser_t));
@@ -132,7 +127,6 @@ int main(void)
 
 	hall_parser.callback = ergometer_stroke;
 	hall_parser.damping_params_callback = params_received;
-	hall_parser.angular_velocity_callback = angular_velocity_received;
 	hall_parser.params.I = MOMENT_OF_INERTIA;
 
 	HAL_TIM_Base_Start_IT(&htim1);
@@ -351,11 +345,26 @@ void ergometer_stroke(ergometer_stroke_params_t* stroke_params)
 	sprintf(buffer, "%.3f,%.3f,%.3f\r\n", stroke_params->energy_j, stroke_params->mean_power, stroke_params->distance);
 	HAL_UART_Transmit(&huart2, buffer, strlen(buffer), 100);
 #else
-	usb_out_data.energy_j = stroke_params->energy_j;
-	usb_out_data.mean_power = stroke_params->mean_power;
-	usb_out_data.distance = stroke_params->distance;
+	/*usb_stroke_data.energy_j = stroke_params->energy_j;
+	usb_stroke_data.mean_power = stroke_params->mean_power;
+	usb_stroke_data.distance = stroke_params->distance;
 
-	USBD_HID_SendReport(&hUsbDeviceFS, &usb_out_data, 16);
+	USBD_HID_SendReport(&hUsbDeviceFS, &usb_stroke_data, 16);*/
+
+	out_data.energy_j = stroke_params->energy_j;
+	out_data.mean_power = stroke_params->mean_power;
+	out_data.distance = stroke_params->distance;
+	out_data.checksum = 0;
+
+	for(uint8_t* it = (uint8_t*)&out_data; it < (uint8_t*)&out_data + sizeof(out_data_t); it++)
+	{
+		if(it != (uint8_t*)&out_data.checksum && it != (uint8_t*)&out_data.checksum + 1)
+		{
+			out_data.checksum += *it;
+		}
+	}
+
+	HAL_UART_Transmit(&huart2, (uint8_t*)&out_data, sizeof(out_data_t), 100);
 #endif
 }
 
@@ -366,16 +375,6 @@ void params_received(damping_constants_t* damping_constants)
 	storage_data.km = damping_constants->km;
 	storage_data.ks = damping_constants->ks;
 	storage_write(&storage_data);
-}
-
-void angular_velocity_received(float angular_velocity)
-{
-	usb_out_data.energy_j = 0.0f;
-	usb_out_data.distance = 0.0f;
-	usb_out_data.mean_power = 0.0f;
-	memcpy(&usb_out_data.padding, &angular_velocity, sizeof(float));
-
-	USBD_HID_SendReport(&hUsbDeviceFS, &usb_out_data, 16);
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)

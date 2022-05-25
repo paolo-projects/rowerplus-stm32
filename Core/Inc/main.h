@@ -80,13 +80,6 @@ void Error_Handler(void);
 	char et[4];
 } out_data_t;
 
-typedef struct {
-	float32_t energy_j;
-	float32_t mean_power;
-	float32_t distance;
-	char padding[4];
-} usb_out_data_t;
-
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
