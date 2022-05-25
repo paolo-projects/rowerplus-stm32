@@ -168,10 +168,10 @@ static inline void compute_stroke(hall_parser_t* parser)
 			stroke_params.energy_j = (4 * energy + 0.35f * stroke_time / 1e3f) / 4187.0f;
 			stroke_params.mean_power = mean_power;
 			// We include here the distance calculated from the previous release phase
-			stroke_params.distance = distance + hall_parser->release_distance;
+			stroke_params.distance = distance + parser->release_distance;
 			parser->callback(&stroke_params);
 
-			hall_parser->release_distance = 0.0f;
+			parser->release_distance = 0.0f;
 		}
 	}
 }
@@ -216,7 +216,7 @@ static inline void compute_stroke_params(hall_parser_t* parser)
 
 	if(regression_count > REGRESSION_MIN_POINTS)
 	{
-		hall_parser->release_distance = 0.0f;
+		parser->release_distance = 0.0f;
 
 		float ka_c = parser->damping_constants.ka / DISTANCE_CORRELATION_COEFFICIENT;
 		float km_c = parser->damping_constants.km / DISTANCE_CORRELATION_COEFFICIENT;
@@ -236,10 +236,10 @@ static inline void compute_stroke_params(hall_parser_t* parser)
 		}
 
 		// The distance for the release phase (deceleration) is calculated here taking
-		// all the points into account. This value will be added to the next pull stroke
+		// all the points into account. This value will be added to the next pull phase
 		for(uint32_t i = 0; i < parser->angular_velocities_filtered.size; i++)
 		{
-			hall_parser->release_distance += compute_distance(M_PI_2, *fixed_vector_f_get(&hall_parser->angular_velocities_filtered, i), ka_c, km_c, ks_c);
+			parser->release_distance += compute_distance(M_PI_2, *fixed_vector_f_get(&parser->angular_velocities_filtered, i), ka_c, km_c, ks_c);
 		}
 
 		lms_result_t* result = lms_quadratic(regression_y, regression_x, n);

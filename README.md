@@ -8,17 +8,17 @@ The only modification you have to make is adding four equally distanced (90° an
 and adding a Hall sensor to the frame. Some ergometer models could already have the magnets and the hall sensor set up,
 but in this case you probably don't need the app as the builtin computer should do its job.
 
-This is a picture of the hall sensor applied to the from of my ergometer, and the magnets glued to the flywheel:
+This is a picture of the hall sensor applied to the frame of my ergometer, and the magnets glued to the flywheel:
 
 <img src="/readme/hall_sensor.jpg" />
 
-Here's a picture of the STM32 board, the AT24C256 EEPROM and the wirings:
+Here's a picture of the STM32 board, the AT24C256 EEPROM and the wiring:
 
 <img src="/readme/wiring.jpg" />
 
 ## The Hall sensor
 
-The Hall sensor I'm using is the A3144. It's a switch sensor, meaning that when the magnetic field is over a certain
+The Hall sensor I'm using is the A3144. It's a switch sensor, meaning that when the magnetic field is above a certain
 treshold, the switch closes, and if the field drops under a treshold the switch opens again. This behavior can be 
 detected through an external interrupt. 
 
@@ -61,7 +61,7 @@ The constant Ka is for the air damping, Km is for the magnetic damping and Ks ac
 
 These three values are calculated after every stroke by measuring the free deceleration of the flywheel, and fitting to this equation:
 
-<img src="https://latex.codecogs.com/svg.latex?%5Cfrac%7Bdw%7D%7Bdt%7D%3DK_a%5Comega%5E2&plus;K_m%5Comega&plus;K_s" />
+<img src="https://latex.codecogs.com/svg.latex?%5Cfrac%7Bdw%7D%7Bdt%7D%3D%5Cfrac%7BK_a%7D%7BI%7D%5Comega%5E2%26plus%3B%5Cfrac%7BK_m%7D%7BI%7D%5Comega%26plus%3B%5Cfrac%7BK_s%7D%7BI%7D" />
 
 If the fit is good, the current values are updated and stored into the EEPROM.
 
@@ -77,20 +77,6 @@ Where `c` is a constant of the water resistance for an hypothetical boat motion,
 
 - The computed values are the energy spent (in Joules), the distance traveled (in meters) and the average stroke power.
 
-## USB Communication
+## USB-UART Communication
 
-There are two versions of this firmware. The first one uses the builtin StLink USB-to-UART to send the values to the host device.
-This method is totally fine, but I implemented another version of the firmware that leverages the USB capabilities of the STM32 board.
-
-By wiring a USB cable to the PA11 and PA12 pins (I'm using a Nucleo F401RE, your pins could be different), and providing power to the E5V pin, 
-the device is cabable of setting up its own USB communication with the host. The StLink circuit is still needed for the HSE crystal, and the 
-jumper has to be moved to E5V setup.
-
-The device sets itself up as a HID device, delivering 16-bytes data packets with the three float values of energy, power and distance.
-
-This method is of course (potentially) faster than the virtual COM port, and additionally the device can be given a unique VID and PID to make sure the
-android app detects only this specific custom device.
-
-*Since we're using the StLink builtin oscillator, we have to wait for it to be powered up before initializing the HSE clock. When we power up the
-device through the E5V pin the STM32 gets initialized before the StLink is ready, so it doesn't detect the HSE clock and won't start.
-This is the reason a 3000 milliseconds delay is added at the start. This is mandatory, and the only fix is to connect your own external oscillator circuit.*
+The device communicates with the android app through the builtin STLink USB-Serial interface.

@@ -94,10 +94,6 @@ int main(void)
 
   /* USER CODE BEGIN Init */
 
-  // This delay is required since when we power the device through E5V pin
-  // the STLink HSE needs some time to be powered up
-  //HAL_Delay(3000);
-
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -118,7 +114,8 @@ int main(void)
 
 	// We check if we have the parameters stored inside the EEPROM
 	// If that's the case, we use them straight away
-	if(storage_read(&storage_data)) {
+	if(storage_read(&storage_data))
+	{
 		hall_parser.damping_constants.ka = storage_data.ka;
 		hall_parser.damping_constants.km = storage_data.km;
 		hall_parser.damping_constants.ks = storage_data.ks;
@@ -345,12 +342,6 @@ void ergometer_stroke(ergometer_stroke_params_t* stroke_params)
 	sprintf(buffer, "%.3f,%.3f,%.3f\r\n", stroke_params->energy_j, stroke_params->mean_power, stroke_params->distance);
 	HAL_UART_Transmit(&huart2, buffer, strlen(buffer), 100);
 #else
-	/*usb_stroke_data.energy_j = stroke_params->energy_j;
-	usb_stroke_data.mean_power = stroke_params->mean_power;
-	usb_stroke_data.distance = stroke_params->distance;
-
-	USBD_HID_SendReport(&hUsbDeviceFS, &usb_stroke_data, 16);*/
-
 	out_data.energy_j = stroke_params->energy_j;
 	out_data.mean_power = stroke_params->mean_power;
 	out_data.distance = stroke_params->distance;
