@@ -13,7 +13,7 @@
 #include "config.h"
 
 typedef struct {
-	float energy_j;
+	float energy_kcal;
 	float mean_power;
 	float distance;
 } ergometer_stroke_params_t;
@@ -45,6 +45,7 @@ typedef struct {
 	fixed_vector_float_t angular_velocities;
 	fixed_vector_systemtime_t angular_velocities_times;
 	fixed_vector_float_t angular_velocities_filtered;
+	fixed_vector_systemtime_t angular_velocities_filtered_times;
 	ergometer_stroke_callback callback;
 	ergometer_damping_constants_callback damping_params_callback;
 	ergometer_params_t params;

@@ -72,7 +72,7 @@ void Error_Handler(void);
 // 24 bytes
  typedef struct {
 	char bt[4];
-	float32_t energy_j;
+	float32_t energy;
 	float32_t mean_power;
 	float32_t distance;
 	uint16_t checksum;

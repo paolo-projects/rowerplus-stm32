@@ -5,7 +5,7 @@ through USB-OTG connection and serial communication.
 
 This firmware is a general purpose firmware that you can use on any type of ergometer with a flywheel.
 The only modification you have to make is adding four equally distanced (90° angle between them) magnets to the flywheel,
-and adding a Hall sensor to the frame. Some ergometer models could already have the magnets and the hall sensor set up,
+and adding one Hall sensor to the frame. Some ergometer models could already have the magnets and the hall sensor set up,
 but in this case you probably don't need the app as the builtin computer should do its job.
 
 This is a picture of the hall sensor applied to the frame of my ergometer, and the magnets glued to the flywheel:
@@ -24,8 +24,9 @@ detected through an external interrupt.
 
 The A3144 I purchased is, unwillingly, a latching sensor, meaning that the switch changes its state when a field 
 of a certain polarity is over a certain treshold, and then keeps this state even if the field drops. The switch
-state changes again when a field of opposite polarity gets detected, and so on. To account for this behavior I
-flipped two of the four magnets, and now I have it in this configuration: NSNS (supposing the first one is North polarity).
+state changes again when a field of opposite polarity gets detected, and so on. In other words, the sensor changes its state every time 
+a magnetic field of polarity opposite from the last one gets above the treshold. To account for this behavior I
+flipped two of the four magnets, and now I have them in this configuration: NSNS (supposing the first one is North polarity).
 
 The angular velocity values measured from the hall sensor have a lot of noise. To remove the noise, an average filter is applied
 to the measurements. Here you can see the difference:
@@ -34,8 +35,10 @@ to the measurements. Here you can see the difference:
 
 ## The EEPROM
 
-Since it takes many strokes to compute the damping constants, I added an EEPROM to store the values when the device is unplugged.
-The memory is constantly updated every time new values are computed.
+Since the quadratic fit for the damping constants has to have its R<sup>2</sup> > 0.9, it could take many strokes to compute the values.
+Hence I added an EEPROM to store the values when the device is unplugged and read them when it's on again.
+The memory is constantly updated every time new values are computed. This could be an issue as EEPROMs don't have too many write cycles,
+so using a memory that supports more write cycles such as an SD card could be better.
 
 ## Why the STM32?
 
@@ -75,8 +78,51 @@ Where `c` is a constant of the water resistance for an hypothetical boat motion,
 
 - The configuration is stored in the `config.h` header file.
 
-- The computed values are the energy spent (in Joules), the distance traveled (in meters) and the average stroke power.
+- The computed values are the energy spent (in KCal), the distance traveled (in meters) and the average stroke power (in Watts).
+
+	*Notes*
+	
+	The energy in KCal is an approximation of the energy spent by the rower, while the stroke power is an approximation of just the energy spent
+	to accelerate the flywheel. The difference is that the first value takes into account (with a big approximation) the energy burned by the
+	body for the entire movement, while the second one is just the energy that actually gets to the flywheel.
+
+## The Moment of Inertia
+
+To use the previous equations, an exact value of the moment of inertia of the flywheel is needed. I disassembled my ergometer until the last piece
+to get my hands on the flywheel alone, and with a big approximation of the shape I calculated the moment of inertia. 
+
+The problem was that the calories and distance values were too low, so I further approximated the shape of the flywheel and calculated a new moment of inertia,
+which turned out to be approximately 3 times the previous one. The values were still too low, so I arbitrarily multiplied this last value by 3 and finally
+got acceptable values.
 
 ## USB-UART Communication
 
 The device communicates with the android app through the builtin STLink USB-Serial interface.
+The data is sent through this packet structure:
+
+```c++
+ typedef struct {
+	char bt[4];
+	float32_t energy;
+	float32_t mean_power;
+	float32_t distance;
+	uint16_t checksum;
+	char pd[2];
+	char et[4];
+} out_data_t;
+```
+
+`bt` are two begin-trasmission control characters set to "BT", while `et` are end-transmission control characters set to "ET". The other 2+2 bytes are for alignment. The energy field is the float energy value in KCal. The same applies to the power (in Watts), and the distance (in meters).
+
+The checksum field is a checksum of the entire structure with the checksum field set to 0. The byte order used by the STM32 board is little-endian.
+
+## Stroke and distance value
+
+Since the params are sent as soon as the flywheel starts decelerating, the distance value cannot be calculated in its entirety, since it needs the values 
+from the decelerating phase.
+To fix this, after the decelerating phase is over, when the firmware calculates the points for the damping constants, it calculates the "excess"
+distance for the decelerating phase and add it to the next stroke. So each stroke has the distance made of part of the distance from the current stroke and part from the previous one.
+
+## License
+
+This software is released under GNU GPLv3 License. See the LICENSE file for more options.

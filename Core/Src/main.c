@@ -50,7 +50,7 @@ storage_data_t storage_data;
 
 out_data_t out_data ={
 		.bt = {'B', 'T', 0, 0},
-		.energy_j = 0.0f,
+		.energy = 0.0f,
 		.mean_power = 0.0f,
 		.distance = 0.0f,
 		.checksum = 0,
@@ -339,10 +339,10 @@ void ergometer_stroke(ergometer_stroke_params_t* stroke_params)
 {
 #ifdef DEBUG_STROKE_PARAMS
 	char buffer[32];
-	sprintf(buffer, "%.3f,%.3f,%.3f\r\n", stroke_params->energy_j, stroke_params->mean_power, stroke_params->distance);
+	sprintf(buffer, "%.3f,%.3f,%.3f\r\n", stroke_params->energy, stroke_params->mean_power, stroke_params->distance);
 	HAL_UART_Transmit(&huart2, buffer, strlen(buffer), 100);
 #else
-	out_data.energy_j = stroke_params->energy_j;
+	out_data.energy = stroke_params->energy_kcal;
 	out_data.mean_power = stroke_params->mean_power;
 	out_data.distance = stroke_params->distance;
 	out_data.checksum = 0;

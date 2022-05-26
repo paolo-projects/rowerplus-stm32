@@ -66,6 +66,7 @@ static inline void angular_velocity_measurement_received(hall_parser_t* parser)
 	// Apply filter (just averaging the last measurement with the previous ones to remove zig-zag from curve)
 	float filtered_angular_velocity = get_angular_velocity_filtered(parser);
 	fixed_vector_f_push_back(&parser->angular_velocities_filtered, filtered_angular_velocity);
+	fixed_vector_st_push_back(&parser->angular_velocities_filtered_times, fixed_vector_st_get(&parser->angular_velocities_times, parser->angular_velocities_times.size - 1));
 
 	if(parser->angular_velocities_filtered.size > ANGULAR_VELOCITIES_LAG*2)
 	{
@@ -78,6 +79,7 @@ static inline void angular_velocity_measurement_received(hall_parser_t* parser)
 			fixed_vector_f_clear(&parser->angular_velocities);
 			fixed_vector_f_clear(&parser->angular_velocities_filtered);
 			fixed_vector_st_clear(&parser->angular_velocities_times);
+			fixed_vector_st_clear(&parser->angular_velocities_filtered_times);
 		} else if (is_w_a_minimum(parser))//(parser->stroke_state == DECELERATING || parser->stroke_state == REST) && new_state == PULLING)
 		{
 			compute_stroke_params(parser);
@@ -85,6 +87,7 @@ static inline void angular_velocity_measurement_received(hall_parser_t* parser)
 			fixed_vector_f_clear(&parser->angular_velocities);
 			fixed_vector_f_clear(&parser->angular_velocities_filtered);
 			fixed_vector_st_clear(&parser->angular_velocities_times);
+			fixed_vector_st_clear(&parser->angular_velocities_filtered_times);
 		}
 
 		parser->stroke_state = new_state;
@@ -153,19 +156,22 @@ static inline void compute_stroke(hall_parser_t* parser)
 			float km_c = parser->damping_constants.km / DISTANCE_CORRELATION_COEFFICIENT;
 			float ks_c = parser->damping_constants.ks / DISTANCE_CORRELATION_COEFFICIENT;
 
-			for(uint32_t i = 0; i < parser->angular_velocities_filtered.size - 1 - to_discard_end; i++)
+			for(uint32_t i = 0; i < parser->angular_velocities_filtered.size; i++)
 			{
-				energy += compute_energy(parser, *fixed_vector_f_get(&parser->angular_velocities_filtered, i), *fixed_vector_f_get(&parser->angular_velocities_filtered, i-1),
-						fixed_vector_st_get(&parser->angular_velocities_times, i), fixed_vector_st_get(&parser->angular_velocities_times, i-1));
+				if(i > 0 && i < parser->angular_velocities_filtered.size - to_discard_end)
+				{
+					energy += compute_energy(parser, *fixed_vector_f_get(&parser->angular_velocities_filtered, i), *fixed_vector_f_get(&parser->angular_velocities_filtered, i-1),
+							fixed_vector_st_get(&parser->angular_velocities_filtered_times, i), fixed_vector_st_get(&parser->angular_velocities_filtered_times, i-1));
+				}
 				distance += compute_distance(M_PI_2, *fixed_vector_f_get(&parser->angular_velocities_filtered, i), ka_c, km_c, ks_c);
 			}
 
 			// Compute other variables
-			uint32_t stroke_time = systemtime_time_diff_us(fixed_vector_st_get(&parser->angular_velocities_times, parser->angular_velocities_times.size - 1 - to_discard_end), fixed_vector_st_get(&parser->angular_velocities_times, 0));
+			uint32_t stroke_time = systemtime_time_diff_us(fixed_vector_st_get(&parser->angular_velocities_filtered_times, parser->angular_velocities_filtered_times.size - 1 - to_discard_end), fixed_vector_st_get(&parser->angular_velocities_filtered_times, 0));
 			float mean_power = (float)(1e6*energy) / stroke_time;
 
 			// Send the stroke results
-			stroke_params.energy_j = (4 * energy + 0.35f * stroke_time / 1e3f) / 4187.0f;
+			stroke_params.energy_kcal = (4 * energy + 0.35f * stroke_time / 1e3f) / 4187.0f;
 			stroke_params.mean_power = mean_power;
 			// We include here the distance calculated from the previous release phase
 			stroke_params.distance = distance + parser->release_distance;
@@ -178,20 +184,33 @@ static inline void compute_stroke(hall_parser_t* parser)
 
 static inline void compute_stroke_params(hall_parser_t* parser)
 {
+	float ka_c = parser->damping_constants.ka / DISTANCE_CORRELATION_COEFFICIENT;
+	float km_c = parser->damping_constants.km / DISTANCE_CORRELATION_COEFFICIENT;
+	float ks_c = parser->damping_constants.ks / DISTANCE_CORRELATION_COEFFICIENT;
+
+	parser->release_distance = 0.0f;
+
+	// The distance for the release phase (deceleration) is calculated here taking
+	// all the points into account. This value will be added to the next pull phase
+	for(uint32_t i = 0; i < parser->angular_velocities_filtered.size; i++)
+	{
+		parser->release_distance += compute_distance(M_PI_2, *fixed_vector_f_get(&parser->angular_velocities_filtered, i), ka_c, km_c, ks_c);
+	}
+
 	// Update the damping factors through a linear fit of the deceleration velocities
 	/**
 	 * The deceleration phase is where the angular velocity decreases for the effect
 	 * of the air resistance, magnetic resistance and other kinds of friction, thus we
 	 * can find the damping parameters here through the formula:
 	 *
-	 * dw / dt = kA/I * w^2 + kM/I
+	 * dw / dt = -kA/I * w^2 - kM/I
 	 *
 	 * Here we assume the magnetic damping is independent of the angular velocity,
 	 * (Tm = kM ===> the magnetic torque is constant through all the motion).
 	 * This may not be the case as it could as well be proportional to the angular velocity
 	 * (Tm = kM * w) and in this case we can fit to a polynomial.
 	 *
-	 * dw / dt = kA/I * w^2 + kM/I * w + kS/I
+	 * dw / dt = -kA/I * w^2 - kM/I * w - kS/I
 	 *
 	 * The constant term kS in this case will account for the friction between the moving parts.
 	 *
@@ -216,30 +235,18 @@ static inline void compute_stroke_params(hall_parser_t* parser)
 
 	if(regression_count > REGRESSION_MIN_POINTS)
 	{
-		parser->release_distance = 0.0f;
-
-		float ka_c = parser->damping_constants.ka / DISTANCE_CORRELATION_COEFFICIENT;
-		float km_c = parser->damping_constants.km / DISTANCE_CORRELATION_COEFFICIENT;
-		float ks_c = parser->damping_constants.ks / DISTANCE_CORRELATION_COEFFICIENT;
 
 		int n = 0;
 
 		for(uint32_t i = to_discard_begin + 1; i < parser->angular_velocities_filtered.size - to_discard_end; i++)
 		{
 			float angular_accel = 1e6f*(*fixed_vector_f_get(&parser->angular_velocities_filtered, i) - *fixed_vector_f_get(&parser->angular_velocities_filtered, i-1))
-																			/ systemtime_time_diff_us(fixed_vector_st_get(&parser->angular_velocities_times, i), fixed_vector_st_get(&parser->angular_velocities_times, i-1));
+																					/ systemtime_time_diff_us(fixed_vector_st_get(&parser->angular_velocities_filtered_times, i), fixed_vector_st_get(&parser->angular_velocities_filtered_times, i-1));
 			if(angular_accel<0) {
 				regression_y[n] = angular_accel;
 				regression_x[n] = *fixed_vector_f_get(&parser->angular_velocities_filtered, i);
 			}
 			n++;
-		}
-
-		// The distance for the release phase (deceleration) is calculated here taking
-		// all the points into account. This value will be added to the next pull phase
-		for(uint32_t i = 0; i < parser->angular_velocities_filtered.size; i++)
-		{
-			parser->release_distance += compute_distance(M_PI_2, *fixed_vector_f_get(&parser->angular_velocities_filtered, i), ka_c, km_c, ks_c);
 		}
 
 		lms_result_t* result = lms_quadratic(regression_y, regression_x, n);
@@ -248,9 +255,9 @@ static inline void compute_stroke_params(hall_parser_t* parser)
 		// otherwise we discard the results
 		if(result != NULL && result->r2 > LINREG_R2_MIN_TRESHOLD)
 		{
-			parser->damping_constants.ka = result->c * parser->params.I;
-			parser->damping_constants.km = result->b * parser->params.I;
-			parser->damping_constants.ks = result->a * parser->params.I;
+			parser->damping_constants.ka = -result->c * parser->params.I;
+			parser->damping_constants.km = -result->b * parser->params.I;
+			parser->damping_constants.ks = -result->a * parser->params.I;
 			parser->damping_constants.has_params = TRUE;
 
 			parser->damping_params_callback(&parser->damping_constants);
@@ -266,7 +273,7 @@ static inline void compute_stroke_params(hall_parser_t* parser)
 
 static inline float compute_distance(float angle, float w2, float ka_c, float km_c, float ks_c)
 {
-	return -(angle * cbrt(ka_c + km_c/w2 + ks_c/sqr(w2)));
+	return angle * cbrt(ka_c + km_c/w2 + ks_c/sqr(w2));
 }
 
 static inline float compute_energy(hall_parser_t* parser, float w2, float w1, systemtime_t* t2, systemtime_t* t1)
@@ -283,9 +290,9 @@ static inline float compute_energy(hall_parser_t* parser, float w2, float w1, sy
 				M_PI_2*(
 						parser->params.I *
 						1e6f * (w2 - w1) / systemtime_time_diff_us(t2, t1)
-						- parser->damping_constants.ka*sqr(w2)
-		- parser->damping_constants.km*w2
-		- parser->damping_constants.ks
+						+ parser->damping_constants.ka*sqr(w2)
+		+ parser->damping_constants.km*w2
+		+ parser->damping_constants.ks
 				);
 	} else
 	{
