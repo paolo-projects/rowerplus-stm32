@@ -64,7 +64,7 @@ The constant Ka is for the air damping, Km is for the magnetic damping and Ks ac
 
 These three values are calculated after every stroke by measuring the free deceleration of the flywheel, and fitting to this equation:
 
-<img src="https://latex.codecogs.com/svg.latex?%5Cfrac%7Bdw%7D%7Bdt%7D%3D%5Cfrac%7BK_a%7D%7BI%7D%5Comega%5E2%26plus%3B%5Cfrac%7BK_m%7D%7BI%7D%5Comega%26plus%3B%5Cfrac%7BK_s%7D%7BI%7D" />
+<img src="https://latex.codecogs.com/svg.latex?%5Cfrac%7Bdw%7D%7Bdt%7D%3D-%5Cfrac%7BK_a%7D%7BI%7D%5Comega%5E2-%5Cfrac%7BK_m%7D%7BI%7D%5Comega-%5Cfrac%7BK_s%7D%7BI%7D" />
 
 If the fit is good, the current values are updated and stored into the EEPROM.
 
