@@ -43,16 +43,20 @@ so using a memory that supports more write cycles such as an SD card could be be
 ## Why the STM32?
 
 The STM32 has been chosen for the high clock speed. Additionally, the STM32F401RE has a FPU (floating point unit) 
-that should speed up the floating point calculations inside the firmware.
+that should speed up the floating point calculations inside the firmware. The device also supports USB device capabilities, and I'm working
+on a version of the firmware that communicates through USB HID protocol, with the USB cable wired to the main board bypassing the STLink USB-Serial converter.
+
+Direct USB communication should help when using boards with no embedded STLink. An alternative would be to set up the USB as a vcom and use serial communication
+through on-board usb. If no STLink is available on the board, make sure there's a crystal to feed the HSE clock for the USB device.
 
 ## What does it measure?
 
 The firmware measures the angular velocity of the flywheel by measuring the time elapsed between two magnet detections,
 and knowing that the magnets are 90 deg apart we can get the angular velocity through the formula:
 
-<img src="https://latex.codecogs.com/svg.image?\omega&space;=&space;\frac{(\pi&space;/&space;2)*1000}{t_2&space;-&space;t_1}" title="https://latex.codecogs.com/svg.image?\omega = \frac{(\pi / 2)*1000}{t_2 - t_1}" />
+<img src="https://latex.codecogs.com/svg.image?\omega&space;=&space;\frac{(\pi&space;/&space;2)*10^6}{t_2&space;-&space;t_1}" title="https://latex.codecogs.com/svg.image?\omega = \frac{(\pi / 2)*10^6}{t_2 - t_1}" />
 
-The time values in this formula are in milliseconds.
+The time values in this formula are in microseconds.
 
 I used this website as a reference for the calculations: [http://eodg.atm.ox.ac.uk/user/dudhia/rowing/physics/ergometer.html](http://eodg.atm.ox.ac.uk/user/dudhia/rowing/physics/ergometer.html)
 
@@ -89,11 +93,14 @@ Where `c` is a constant of the water resistance for an hypothetical boat motion,
 ## The Moment of Inertia
 
 To use the previous equations, an exact value of the moment of inertia of the flywheel is needed. I disassembled my ergometer until the last piece
-to get my hands on the flywheel alone, and with a big approximation of the shape I calculated the moment of inertia. 
+to get my hands on the flywheel alone, and by approximating its shape I calculated the moment of inertia. 
 
-The problem was that the calories and distance values were too low, so I further approximated the shape of the flywheel and calculated a new moment of inertia,
-which turned out to be approximately 3 times the previous one. The values were still too low, so I arbitrarily multiplied this last value by 3 and finally
-got acceptable values.
+The problem was that the calories and distance values were too low, so I further approximated the shape of the flywheel to a solid cylinder and calculated a new moment of inertia,
+which turned out to be close to 3 times the previous one. The values were still too low, so I arbitrarily multiplied this last value by 3 and finally
+got values in line with other ergometers.
+
+If you want to replicate this project, this is the trickiest step to do, as the flywheel is generally linked to the handle through a belt and it takes a long
+time to take it apart. When you have it in your hands, use an approximation of the shape, you can try with a combination of simple 3D shapes, and calculate the moment of intertia.
 
 ## USB-UART Communication
 
@@ -121,7 +128,7 @@ The checksum field is a checksum of the entire structure with the checksum field
 Since the params are sent as soon as the flywheel starts decelerating, the distance value cannot be calculated in its entirety, since it needs the values 
 from the decelerating phase.
 To fix this, after the decelerating phase is over, when the firmware calculates the points for the damping constants, it calculates the "excess"
-distance for the decelerating phase and add it to the next stroke. So each stroke has the distance made of part of the distance from the current stroke and part from the previous one.
+distance for the decelerating phase and adds it to the next stroke. So each stroke's distance is partially made by the current stroke's accelerating phase, and the previous stroke's decelerating phase.
 
 ## License
 
