@@ -26,7 +26,7 @@
 #define MAGNETS_ANGLE M_PI/2
 //#define MOMENT_OF_INERTIA 5.337e-3f  // A good estimate
 //#define MOMENT_OF_INERTIA 1.454e-2f  // Approximation to a solid cylinder of same mass
-#define MOMENT_OF_INERTIA 4.361e-2f    // Looser approximation to make results fit
+#define MOMENT_OF_INERTIA 4.361e-2f  // Looser approximation to make results fit
 #define DISTANCE_CORRELATION_COEFFICIENT 2.8f
 
 #define ANGULAR_VELOCITIES_BUFFER_SIZE 256

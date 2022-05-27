@@ -1,4 +1,0 @@
-../Core/Src/hall_parser.c:336:20:is_w_a_maximum	24	static
-../Core/Src/hall_parser.c:319:20:is_w_a_minimum	24	static
-../Core/Src/hall_parser.c:38:6:hall_parser_init	16	static
-../Core/Src/hall_parser.c:43:6:hall_parser_push_trigger	96	static
